@@ -97,17 +97,18 @@ fn draw_block(x: u16, y: u16) {
     print!("\x1B[{};{}H■", y, x);
 }
 
-fn apple_coordinates(terminal_cols: &u16, terminal_rows: &u16) -> (u16, u16) { // coordinates of apple, --> (x: u16, y: 16)
-    let rand_rows= fastrand::u16(0..=*terminal_rows);
-    let rand_cols= fastrand::u16(0..=*terminal_cols);
-    (rand_rows,rand_cols)
+fn apple_coordinates(terminal_cols: u16, terminal_rows: u16) -> (u16, u16) {
+    let x = fastrand::u16(1..terminal_cols);
+    let y = fastrand::u16(1..terminal_rows);
+    (x, y)
     //TODO: Include logic to ensure apple cannot spawn on top of snake
 }
 
 
+
+
 fn get_input() -> Receiver<char> {
     let (tx, rx) = channel();
-
     thread::spawn(move || {
         let stdin = io::stdin();
         for byte in stdin.bytes() {
@@ -117,7 +118,6 @@ fn get_input() -> Receiver<char> {
             }
         }
     });
-
     rx
 }
 
@@ -128,39 +128,44 @@ fn draw_apple(x: u16, y: u16) {
 fn main() {
     let original = enable_raw_mode();
     let (terminal_cols, terminal_rows) = terminal_size().expect("Could not get terminal size");
-    let (mut apple_x, mut apple_y) = apple_coordinates(&terminal_cols, &terminal_rows);
+    let (mut apple_x, mut apple_y) = apple_coordinates(terminal_cols, terminal_rows);
+    // let (mut apple_y, mut apple_x) = apple_coordinates(&terminal_cols, &terminal_rows);
+    // let (mut apple_x, mut apple_y) = (50, 20);
     let mut trailing_direction = fastrand::u16(0..=3); // Up = 0, Right = 1, Down = 2, Left = 3
-    //TODO: If on hte left side of the terminal make it right? just ensure that it doesn't allow for auto losing, maybe spawn snake 
+    //TODO: If on the left side of the terminal make it right? just ensure that it doesn't allow for auto losing, maybe spawn snake 
     // in the middle if continuing to use this rand function for cardinal directions 
     let input = get_input();
     let mut x = terminal_cols / 4;
     let mut y = terminal_rows / 2;
-    clear_screen();
+    let (mut prev_snake_x, mut prev_snake_y): (u16, u16) = (0,0);
     loop {
         clear_screen();
         draw_apple(apple_x, apple_y);
         draw_block(x, y);
         io::stdout().flush().unwrap();
+        if x == apple_x && y == apple_y {
+            (apple_x, apple_y) = apple_coordinates(terminal_cols, terminal_rows);
+        } 
         if let Ok(key) = input.try_recv() {
             match key {
                 // Up
                 'w'|'k' => {
-                    y -= 1;
+                    // y -= 1;
                     trailing_direction = 0;
                 },
                 // Right
                 'd'|'l' => {
-                    x += 1;
+                    // x += 1;
                     trailing_direction = 1;
                 },
                 // Down
                 's'|'j' => {
-                    y += 1;
+                    // y += 1;
                     trailing_direction = 2;
                 },
                 // Left
                 'a'|'h' => {
-                    x -= 1;
+                    // x -= 1;
                     trailing_direction = 3; 
                 },
                 'q' => break,
@@ -194,18 +199,14 @@ fn main() {
             }
         }
 
-        thread::sleep(time::Duration::from_millis(120));
-        // if y <= terminal_rows {
-        //     y += 1;
-        // }
-        thread::sleep(time::Duration::from_millis(120));
-        if y == terminal_rows || x  == terminal_cols {
-            break
+        thread::sleep(time::Duration::from_millis(75));
+        if y == terminal_rows {
+            y = 1
+            // break
         }
-        if x == apple_x && y == apple_y {
-            // increase length of snake by 1
-            apple_coordinates(&terminal_cols, &terminal_rows); // regenerate coordinates for apple
-        } 
+        if x  == terminal_cols {
+            x = 1
+        }
     }
     clear_screen();
     println!("Game Over!");
