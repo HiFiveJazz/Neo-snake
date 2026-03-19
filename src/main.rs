@@ -143,6 +143,7 @@ fn main() {
         draw_apple(apple_x, apple_y);
         draw_block(x, y);
         io::stdout().flush().unwrap();
+        print!("\x1B[?25l"); // hide cursor
         if x == apple_x && y == apple_y {
             (apple_x, apple_y) = apple_coordinates(terminal_cols, terminal_rows);
         } 
@@ -180,26 +181,28 @@ fn main() {
         match trailing_direction {
             // Up
             0 => {
-               y -= 1 
+               y -= 1; 
+               thread::sleep(time::Duration::from_millis(75));
             }
             //Right
             1 => {
-                x +=1
+                x +=1;
+                thread::sleep(time::Duration::from_millis(30));
             }
             //Down
             2 => {
-                y +=1
+                y +=1;
+                thread::sleep(time::Duration::from_millis(75));
             }
             //Left
             3 => {
-                x -=1
+                x -=1;
+                thread::sleep(time::Duration::from_millis(30));
             }
             _ => {
                 panic!()
             }
         }
-
-        thread::sleep(time::Duration::from_millis(75));
         if y == terminal_rows {
             y = 1
             // break
@@ -207,7 +210,16 @@ fn main() {
         if x  == terminal_cols {
             x = 1
         }
+        if y == 0 {
+            y = terminal_rows 
+            // break
+        }
+        if x  == 0 {
+            break
+            x = terminal_cols 
+        }
     }
     clear_screen();
     println!("Game Over!");
+    print!("\x1B[?25h");
 }
