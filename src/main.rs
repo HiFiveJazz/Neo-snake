@@ -1,7 +1,8 @@
 use std::{thread, time};
 use std::mem;
 use std::os::unix::io::AsRawFd;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
+use std::sync::mpsc::{channel, Receiver};
 use fastrand;
 
 #[repr(C)]
@@ -104,15 +105,31 @@ fn apple_coordinates(terminal_cols: &u16, terminal_rows: &u16) -> (u16, u16) { /
     //TODO: Include logic to ensure apple cannot spawn on top of snake
 }
 
+
+fn get_input() -> Receiver<char> {
+    let (tx, rx) = channel();
+
+    thread::spawn(move || {
+        let stdin = io::stdin();
+        for byte in stdin.bytes() {
+            if let Ok(b) = byte {
+                let c = b as char;
+                tx.send(c).unwrap();
+            }
+        }
+    });
+
+    rx
+}
+
 fn draw_apple(x: u16, y: u16) {
     print!("\x1B[{};{}H\x1B[31m■\x1B[0m", y, x);
 }
 
-// fn 
-
 fn main() {
     let (terminal_cols, terminal_rows) = terminal_size().expect("Could not get terminal size");
     let (mut apple_x, mut apple_y) = apple_coordinates(&terminal_cols, &terminal_rows);
+    let input = get_input();
     let mut x = terminal_cols / 4;
     let mut y = terminal_rows / 2;
     clear_screen();
@@ -120,17 +137,27 @@ fn main() {
         clear_screen();
         draw_apple(apple_x, apple_y);
         draw_block(x, y);
-        io::stdout().flush().unwrap();
 
-        x += 1;
-        if x <= terminal_cols {
-            x += 1;
+        io::stdout().flush().unwrap();
+        if let Ok(key) = input.try_recv() {
+            match key {
+                'w' => y -= 1,
+                's' => y += 1,
+                'a' => x -= 1,
+                'd' => x += 1,
+                _ => {}
+            }
         }
+
+        // x += 1;
+        // if x <= terminal_cols {
+        //     x += 1;
+        // }
 
         thread::sleep(time::Duration::from_millis(120));
-        if y <= terminal_rows {
-            y += 1;
-        }
+        // if y <= terminal_rows {
+        //     y += 1;
+        // }
         thread::sleep(time::Duration::from_millis(120));
         if y == terminal_rows || x  == terminal_cols {
             break
