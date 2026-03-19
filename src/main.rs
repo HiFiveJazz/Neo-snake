@@ -59,7 +59,6 @@ fn enable_raw_mode() -> Termios {
     unsafe {
         tcsetattr(fd, TCSANOW, &termios);
     }
-
     original
 }
 
@@ -127,8 +126,12 @@ fn draw_apple(x: u16, y: u16) {
 }
 
 fn main() {
+    let original = enable_raw_mode();
     let (terminal_cols, terminal_rows) = terminal_size().expect("Could not get terminal size");
     let (mut apple_x, mut apple_y) = apple_coordinates(&terminal_cols, &terminal_rows);
+    let mut trailing_direction = fastrand::u16(0..=3); // Up = 0, Right = 1, Down = 2, Left = 3
+    //TODO: If on hte left side of the terminal make it right? just ensure that it doesn't allow for auto losing, maybe spawn snake 
+    // in the middle if continuing to use this rand function for cardinal directions 
     let input = get_input();
     let mut x = terminal_cols / 4;
     let mut y = terminal_rows / 2;
@@ -137,14 +140,30 @@ fn main() {
         clear_screen();
         draw_apple(apple_x, apple_y);
         draw_block(x, y);
-
         io::stdout().flush().unwrap();
         if let Ok(key) = input.try_recv() {
             match key {
-                'w' => y -= 1,
-                's' => y += 1,
-                'a' => x -= 1,
-                'd' => x += 1,
+                // Up
+                'w'|'k' => {
+                    y -= 1;
+                    trailing_direction = 0;
+                },
+                // Right
+                'd'|'l' => {
+                    x += 1;
+                    trailing_direction = 1;
+                },
+                // Down
+                's'|'j' => {
+                    y += 1;
+                    trailing_direction = 2;
+                },
+                // Left
+                'a'|'h' => {
+                    x -= 1;
+                    trailing_direction = 3; 
+                },
+                'q' => break,
                 _ => {}
             }
         }
@@ -153,6 +172,27 @@ fn main() {
         // if x <= terminal_cols {
         //     x += 1;
         // }
+        match trailing_direction {
+            // Up
+            0 => {
+               y -= 1 
+            }
+            //Right
+            1 => {
+                x +=1
+            }
+            //Down
+            2 => {
+                y +=1
+            }
+            //Left
+            3 => {
+                x -=1
+            }
+            _ => {
+                panic!()
+            }
+        }
 
         thread::sleep(time::Duration::from_millis(120));
         // if y <= terminal_rows {
