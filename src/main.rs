@@ -165,23 +165,27 @@ fn main() {
             match key {
                 // Up
                 'w'|'k' => {
-                    // y -= 1;
-                    trailing_direction = 0;
+                    if trailing_direction != 2 {
+                        trailing_direction = 0;
+                    }
                 },
                 // Right
                 'd'|'l' => {
-                    // x += 1;
-                    trailing_direction = 1;
+                    if trailing_direction != 3 {
+                        trailing_direction = 1;
+                    }
                 },
                 // Down
                 's'|'j' => {
-                    // y += 1;
-                    trailing_direction = 2;
+                    if trailing_direction != 0 {
+                        trailing_direction = 2;
+                    }
                 },
                 // Left
                 'a'|'h' => {
-                    // x -= 1;
-                    trailing_direction = 3; 
+                    if trailing_direction != 1 {
+                        trailing_direction = 3; 
+                    }
                 },
                 'q' => break,
                 _ => {}
