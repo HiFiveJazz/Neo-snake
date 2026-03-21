@@ -97,6 +97,16 @@ fn draw_block(x: u16, y: u16) {
     print!("\x1B[{};{}H■", y, x);
 }
 
+fn draw_tail(x: u16, y: u16, apple_count: u16,  x_prev: u16, y_prev: u16) {
+    if apple_count == 0 {
+        return;
+    }
+    for i in 0..apple_count+1 {
+          print!("\x1B[{};{}H■", y_prev, x_prev);
+    }
+}
+
+
 fn apple_coordinates(terminal_cols: u16, terminal_rows: u16) -> (u16, u16) {
     let x = fastrand::u16(1..terminal_cols);
     let y = fastrand::u16(1..terminal_rows);
@@ -126,6 +136,7 @@ fn draw_apple(x: u16, y: u16) {
 }
 
 fn main() {
+    let mut apple_count:u16 = 0;
     let original = enable_raw_mode();
     let (terminal_cols, terminal_rows) = terminal_size().expect("Could not get terminal size");
     let (mut apple_x, mut apple_y) = apple_coordinates(terminal_cols, terminal_rows);
@@ -137,16 +148,19 @@ fn main() {
     let input = get_input();
     let mut x = terminal_cols / 4;
     let mut y = terminal_rows / 2;
-    let (mut prev_snake_x, mut prev_snake_y): (u16, u16) = (0,0);
+    let mut x_prev = 0;
+    let mut y_prev = 0;
     loop {
         clear_screen();
+        if x == apple_x && y == apple_y { // If we eat the apple
+            (apple_x, apple_y) = apple_coordinates(terminal_cols, terminal_rows); // Regenerate the apple
+            apple_count += 1;
+        } 
         draw_apple(apple_x, apple_y);
         draw_block(x, y);
+        draw_tail(x, y, apple_count, x_prev, y_prev);
         io::stdout().flush().unwrap();
         print!("\x1B[?25l"); // hide cursor
-        if x == apple_x && y == apple_y {
-            (apple_x, apple_y) = apple_coordinates(terminal_cols, terminal_rows);
-        } 
         if let Ok(key) = input.try_recv() {
             match key {
                 // Up
@@ -178,6 +192,8 @@ fn main() {
         // if x <= terminal_cols {
         //     x += 1;
         // }
+        x_prev = x;
+        y_prev = y;
         match trailing_direction {
             // Up
             0 => {
@@ -215,11 +231,11 @@ fn main() {
             // break
         }
         if x  == 0 {
-            break
             x = terminal_cols 
+            // break
         }
     }
     clear_screen();
-    println!("Game Over!");
+    println!("Game Over!, Apple Count: {}", apple_count);
     print!("\x1B[?25h");
 }
