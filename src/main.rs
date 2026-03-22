@@ -3,7 +3,7 @@ use std::mem;
 use std::os::unix::io::AsRawFd;
 use std::io::{self, Read, Write};
 use std::sync::mpsc::{channel, Receiver};
-use fastrand;
+// use fastrand;
 
 #[repr(C)]
 #[derive(Debug)]
@@ -69,14 +69,6 @@ fn disable_raw_mode(original: Termios) {
     }
 }
 
-fn read_key() -> u8 {
-    let mut buf = [0u8; 1];
-    unsafe {
-        read(0, buf.as_mut_ptr(), 1);
-    }
-    buf[0]
-}
-
 fn terminal_size() -> Option<(u16, u16)> {
     let mut ws: Winsize = unsafe { mem::zeroed() };
     let fd = io::stdout().as_raw_fd();
@@ -97,12 +89,9 @@ fn draw_block(x: u16, y: u16) {
     print!("\x1B[{};{}H■", y, x);
 }
 
-fn draw_tail(x: u16, y: u16, apple_count: u16,  x_prev: u16, y_prev: u16) {
-    if apple_count == 0 {
-        return;
-    }
-    for i in 0..apple_count+1 {
-          print!("\x1B[{};{}H■", y_prev, x_prev);
+fn draw_tail(stack: &[(u16,u16)]) {
+    for &(tail_x, tail_y) in stack {
+        draw_block(tail_x, tail_y);
     }
 }
 
@@ -136,8 +125,10 @@ fn draw_apple(x: u16, y: u16) {
 }
 
 fn main() {
+    let mut stack: Vec<(u16, u16)> = Vec::new();
     let mut apple_count:u16 = 0;
-    let original = enable_raw_mode();
+    enable_raw_mode();
+    // let original = enable_raw_mode();
     let (terminal_cols, terminal_rows) = terminal_size().expect("Could not get terminal size");
     let (mut apple_x, mut apple_y) = apple_coordinates(terminal_cols, terminal_rows);
     // let (mut apple_y, mut apple_x) = apple_coordinates(&terminal_cols, &terminal_rows);
@@ -148,17 +139,16 @@ fn main() {
     let input = get_input();
     let mut x = terminal_cols / 4;
     let mut y = terminal_rows / 2;
-    let mut x_prev = 0;
-    let mut y_prev = 0;
     loop {
         clear_screen();
         if x == apple_x && y == apple_y { // If we eat the apple
             (apple_x, apple_y) = apple_coordinates(terminal_cols, terminal_rows); // Regenerate the apple
             apple_count += 1;
+            
         } 
         draw_apple(apple_x, apple_y);
         draw_block(x, y);
-        draw_tail(x, y, apple_count, x_prev, y_prev);
+        draw_tail(&stack);
         io::stdout().flush().unwrap();
         print!("\x1B[?25l"); // hide cursor
         if let Ok(key) = input.try_recv() {
@@ -196,8 +186,16 @@ fn main() {
         // if x <= terminal_cols {
         //     x += 1;
         // }
-        x_prev = x;
-        y_prev = y;
+        // for i in 0.. apple_count {
+        stack.push((x, y));
+        // } 
+        
+        // if stack.len() > apple_count as usize {
+        //     stack.remove(0);
+        // }
+        
+        // x_prev = x;
+        // y_prev = y;
         match trailing_direction {
             // Up
             0 => {
@@ -240,6 +238,6 @@ fn main() {
         }
     }
     clear_screen();
-    println!("Game Over!, Apple Count: {}", apple_count);
+    println!("Game Over!, Score: {}", apple_count);
     print!("\x1B[?25h");
 }
