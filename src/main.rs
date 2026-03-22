@@ -182,20 +182,12 @@ fn main() {
             }
         }
 
-        // x += 1;
-        // if x <= terminal_cols {
-        //     x += 1;
-        // }
-        // for i in 0.. apple_count {
         stack.push((x, y));
-        // } 
         
-        // if stack.len() > apple_count as usize {
-        //     stack.remove(0);
-        // }
+        if stack.len() > apple_count as usize {
+            stack.remove(0);
+        }
         
-        // x_prev = x;
-        // y_prev = y;
         match trailing_direction {
             // Up
             0 => {
